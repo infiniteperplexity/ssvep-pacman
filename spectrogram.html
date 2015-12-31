@@ -14,67 +14,114 @@ var gridSize = 1;
 var gridPad = 0;
 var borderPad = 1;
 var chanPad = 10;
-var nSamples = 500;
+var nSamples = 20;
 var passFilter = d3.range(5,55);
+var tick;
 
 var eegData;
 var nested;
-d3.csv("alpha_fft.csv",function(error, data) {
-	eegData = data.filter(function(d,i) {return i<(nSamples*nChans);});
-	nObs = Math.floor(eegData.length/nChans);
-	nBands = d3.entries(eegData[0]).length;
-	useBands = passFilter.length;
-	
-	for (var i = 0; i < eegData.length; i++) {
-		eegData[i]["row"] = i;
-		eegData[i]["channel"] = i%nChans;
-		eegData[i]["obs"] = Math.floor(i/nChans);
+
+//randomized data for testing
+var embedded = [];
+var lembed = 5000;
+var wembed = 125;
+var aembed = 10;
+for (var i = 0; i<lembed*nChans; i++) {
+	embedded.push([]);
+	for (var j = 0; j<wembed; j++) {
+		embedded[i].push(Math.random()*aembed*aembed);
 	}
-	nested = d3.nest()
-		.key(function (d) {return d.channel;})
-		.key(function (d) {return d.obs;})
-		.entries(eegData)
-	;
-	svg = d3.select("body")
-	  .append("svg")
-		.attr("width",nObs*(gridPad+gridSize)+2*borderPad)
-		.attr("height",nChans*(chanPad+borderPad) + nChans*nBands*(gridPad+gridSize))
-	;
-	
-	var color = d3.scale.linear()
-		.domain([0, 10, 100])
-		.range(["white", "red", "gray"])
-		.clamp(true)
-	;
+}
+
+svg = d3.select("body").append("svg");
+var color = d3.scale.linear()
+			.domain([0, 10, 100])
+			.range(["white", "red", "gray"])
+			.clamp(true)
+		;
 		
-	var cells = svg.selectAll("g")
-		.data(nested).enter()
-		.append("g")
-			.attr("transform", function(d,i) {return "translate(0,"+i*(borderPad+chanPad+useBands*(gridPad+gridSize))+")";})
-	;
-	cells.append("rect")
-		.attr("width",borderPad+nSamples*(gridPad+gridSize))
-		.attr("height",borderPad+useBands*(gridPad+gridSize))
-		.style("stroke","black")
-		.style("fill","none")
-	;
-	
-	cells.selectAll("g")
-		.data(function(channel) {return channel.values;}).enter()
-		.append("g")
+function callback(i,f){try{d3.json(i,f);}catch(e){f(null,embedded);}}
+callback("alpha_fft.csv",function(error, data) {
+	function update(wdata) {
+		tick+=1;
+		eegData = wdata;
+		nObs = Math.floor(eegData.length/nChans);
+		nBands = d3.entries(eegData[0]).length;
+		useBands = passFilter.length;
+		
+		for (var i = 0; i < eegData.length; i++) {
+			eegData[i]["row"] = i;
+			eegData[i]["channel"] = i%nChans;
+			eegData[i]["obs"] = Math.floor(i/nChans);
+		}
+		nested = d3.nest()
+			.key(function (d) {return d.channel;})
+			.key(function (d) {return d.obs;})
+			.entries(eegData)
+		;
+		//console.log(JSON.stringify(nested[0].values[0].values[0]));
+		
+		svg.attr("width",nObs*(gridPad+gridSize)+2*borderPad)
+			.attr("height",nChans*(chanPad+borderPad) + nChans*nBands*(gridPad+gridSize))
+		;
+		
+		//one cell per channel, with an svg:g element
+		var cells = svg.selectAll("g")
+			.data(nested)
+		;
+		cells.enter()
+		  .append("g")
+		  	.attr("transform", function(d,i) {return "translate(0,"+i*(borderPad+chanPad+useBands*(gridPad+gridSize))+")";})
+		  .append("rect")
+			.attr("width",borderPad+nSamples*(gridPad+gridSize))
+			.attr("height",borderPad+useBands*(gridPad+gridSize))
+			.style("stroke","black")
+			.style("fill","none")
+		;
+			
+		
+		//one column per sample, with an svg:g element
+		var columns = cells.selectAll("g")
+			.data(function(channel) {return channel.values;})
+		;
+		columns.enter()
+			.append("g")
 			.attr("transform", function(d,i) {return "translate("+i*(gridPad+gridSize)+",0)";})
-	  .selectAll("rect")
-		.data(function(obs) {var bands = passFilter.map(function (i) {return obs.values[0][String(i)];}); return bands;}).enter()
-		.append("rect")
-			.attr("x", 0)
-			.attr("y", function(d,i) {return i*(gridPad + gridSize);})
-			.attr("width",gridSize)
-			.attr("height",gridSize)
-			.attr("rx",gridSize/5)
-			.attr("ry",gridSize/5)
-			.style("stroke","none")
-			.style("fill", function(d) {return color(d);})
-	;
+		;
+		//one square per band, with an svg:rect element
+		var squares = columns.selectAll("rect")
+			.data(function(obs) {console.log(obs); var bands = passFilter.map(function (i) {return obs.values[0][String(i)];}); return bands;})
+		;
+		squares.enter()
+		  .append("rect")
+				.attr("x", 0)
+				.attr("y", function(d,i) {return i*(gridPad + gridSize);})
+				.attr("width",gridSize)
+				.attr("height",gridSize)
+				.attr("rx",gridSize/5)
+				.attr("ry",gridSize/5)
+				.style("stroke","none")
+		;
+		
+		squares.style("fill", function(d) {return color(d);})
+		;
+		columns.exit().remove();
+		squares.exit().remove();
+		if ((tick+nSamples)*nChans>=data.length) {
+			clearInterval(loop);
+		}
+	}
+	
+	tick = 0;
+	var loop = setInterval(function() {
+		console.log(tick);
+		update(
+			data.filter(function(d,i) {
+				return (i>=(tick*nChans)) && (i<((tick+nSamples)*nChans));
+			}
+		)
+	);
+	}, 1250);
 });
 
 </script>
