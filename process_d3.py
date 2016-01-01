@@ -8,8 +8,8 @@ if __name__ == "__main__":
 	name = 'alpha'
 		
 	hann = np.hanning(N)
-	f = open('C:/Users/m543015/Desktop/GitHub/ssvep/spectro/' + name + '.txt')
-	op = open('C:/Users/m543015/Desktop/GitHub/ssvep/spectro/' + name + '_fft.csv','wb')
+	f = open('C:/Users/Glenn/Documents/GitHub/ssvep/master/' + name + '.txt')
+	op = open('C:/Users/Glenn/Documents/GitHub/ssvep/master/' + name + '_fft.csv','wb')
 	import csv
 	w = csv.writer(op)
 	header = f.readline()
