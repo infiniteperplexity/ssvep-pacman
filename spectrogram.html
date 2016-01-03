@@ -15,7 +15,6 @@ var nSamples = 50;
 var lowpass = 5;
 var highpass = 55;
 var passFilter = d3.range(lowpass,highpass);
-var eegData;
 var nested;
 var color;
 var embedded = [];
@@ -28,6 +27,7 @@ var context;
 var callback;
 var update;
 var loop;
+var speed = 250;
 
 function init() {
 	//randomized data for testing
@@ -94,6 +94,7 @@ function init() {
 
 function reset() {
 	tick = 0;
+	clearInterval(loop);
 	update();
 }
 
@@ -102,7 +103,21 @@ function pause() {
 }
 
 function go() {
-	loop = setInterval(function() {update();}, 250);
+	clearInterval(loop);
+	loop = setInterval(function() {update();}, speed);
+}
+
+function settings() {
+	lowpass = parseInt(document.getElementById("lowpassb").value);
+	highpass = parseInt(document.getElementById("highpassb").value);
+	passFilter = d3.range(lowpass,highpass);
+	nSamples = parseInt(document.getElementById("nSamplesb").value);
+	speed = parseInt(document.getElementById("speedb").value);
+
+	//canvas.width = nSamples*(gridPad+gridSize)+2*borderPad;
+	//canvas.height = nChans*chanPad + 2*borderPad + nChans*passFilter.length*(gridPad+gridSize);
+	tick-=1;
+	update();
 }
 	</script>
 	<style>
@@ -110,9 +125,13 @@ function go() {
 </head>
 <body onload="init();">
 <div>
-	Low Pass: <input type="number" name="lowpass" style="width: 50px;" value=5 min=0 max=125></input>
+	Low Pass: <input type="number" id="lowpassb" onchange="settings();" style="width: 50px;" value=5 min=0 max=125></input>
 	<br>
-	High Pass: <input type="number" name="lowpass" style="width: 50px;" value=55 min=0 max=125></input>
+	High Pass: <input type="number" id="highpassb" onchange="settings();" style="width: 50px;" value=55 min=0 max=125></input>
+	<br>
+	# Samples: <input type="number" id="nSamplesb" onchange="settings();" style="width: 50px;" value=20 min=1 max=1000></input>
+	<br>
+	Speed: <input type="number" id="speedb" onchange="settings();" style="width: 50px;" value=250 min=100 max=1000></input>
 </div>
 <div>
 	<button onclick="go();">Go</button>
