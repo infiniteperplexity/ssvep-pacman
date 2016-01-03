@@ -6,46 +6,49 @@
 	<script>
 
 var tick;
-function init() {
-	var nChans = 8;
-	var gridSize = 1;
-	var gridPad = 0;
-	var borderPad = 1;
-	var chanPad = 10;
-	var nSamples = 50;
-	var passFilter = d3.range(5,55);
-	var eegData;
-	var nested;
-	var color;
+var nChans = 8;
+var gridSize = 1;
+var gridPad = 0;
+var borderPad = 1;
+var chanPad = 10;
+var nSamples = 50;
+var lowpass = 5;
+var highpass = 55;
+var passFilter = d3.range(lowpass,highpass);
+var eegData;
+var nested;
+var color;
+var embedded = [];
+var lembed = 5000;
+var wembed = 125;
+var aembed = 10;
+var thisColor;
+var canvas;
+var context;
+var callback;
+var update;
+var loop;
 
+function init() {
 	//randomized data for testing
-	var embedded = [];
-	var lembed = 5000;
-	var wembed = 125;
-	var aembed = 10;
+
 	for (var i = 0; i<lembed*nChans; i++) {
 		embedded.push([]);
 		for (var j = 0; j<wembed; j++) {
 			embedded[i].push(Math.random()*aembed*aembed);
 		}
 	}
-	var color = d3.scale.linear()
-				.domain([0, 10, 100])
-				.range(["white", "red", "gray"])
-				.clamp(true)
-	;
 	color = d3.scale.linear()
 				.domain([0,5,10, 100])
 				.range(["blue","green","yellow","red"])
 				.clamp(true)
 	;
-	var thisColor;
-	var canvas = document.getElementById("canvas");
-	console.log(canvas);
-	var context = canvas.getContext("2d");
+	thisColor;
+	canvas = document.getElementById("canvas");
+	context = canvas.getContext("2d");
 	//this means if we don't find the data file we use the random noise above instead
 	//function callback(d,f){try{d3.csv(d,f);}catch(e){f(null,embedded);}}
-	function callback(d,f){try{d3.text(d,f);}catch(e){f(null,embedded);}}
+	callback = function(d,f){try{d3.text(d,f);}catch(e){f(null,embedded);}}
 	callback("alpha_fft.csv",function(error, data) {
 		if (typeof(data)=="string") {
 			data = d3.csv.parseRows(data);
@@ -66,18 +69,7 @@ function init() {
 		;
 		canvas.width = nSamples*(gridPad+gridSize)+2*borderPad;
 		canvas.height = nChans*chanPad + 2*borderPad + nChans*passFilter.length*(gridPad+gridSize);
-		/*for(var chan = 0; chan < nChans; chan++) {
-			context.rect(	borderPad,
-										borderPad + chan*(chanPad+passFilter.length*(gridPad+gridSize)),
-										nSamples*(gridPad+gridSize),
-										passFilter.length*(gridPad+gridSize)
-			);
-		}
-		context.lineWidth = 0.5;
-		context.strokeStyle = "black";
-		context.stroke();
-		context.lineWidth = 0;*/
-		function update() {
+		update = function() {
 			tick+=1;
 			for (var chan = 0; chan < nChans; chan++) {
 				for (var samp = 0; samp < nSamples; samp++) {
@@ -94,25 +86,41 @@ function init() {
 				clearInterval(loop);
 			}
 		}
-
 		tick = 0;
 		update();
-		var loop = setInterval(function() {update();}, 250);
 	});
+
 }
 
-function restart() {
+function reset() {
 	tick = 0;
 	update();
-	var loop = setInterval(function() {update();}, 250);
-	alert("hello world!");
+}
+
+function pause() {
+	clearInterval(loop);
+}
+
+function go() {
+	loop = setInterval(function() {update();}, 250);
 }
 	</script>
 	<style>
 	</style>
 </head>
 <body onload="init();">
-<canvas id="canvas"></canvas>
-<button onclick="restart();">Restart</button>
+<div>
+	Low Pass: <input type="number" name="lowpass" style="width: 50px;" value=5 min=0 max=125></input>
+	<br>
+	High Pass: <input type="number" name="lowpass" style="width: 50px;" value=55 min=0 max=125></input>
+</div>
+<div>
+	<button onclick="go();">Go</button>
+	<button onclick="pause();">Pause</button>
+	<button onclick="reset();">Reset</button>
+</div>
+<div>
+	<canvas id="canvas"></canvas>
+</div>
 </body>
 </html>
