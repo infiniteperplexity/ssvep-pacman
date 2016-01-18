@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html>
+<head>
+</head>
+<body>
+<style>
+</style>
+<script src="http://d3js.org/d3.v3.js"></script>
+<script>
+var svg;
+var nChans = 8;
+var gridSize = 1;
+var gridPad = 0;
+var borderPad = 1;
+var chanPad = 10;
+var nSamples = 500;
+var passFilter = d3.range(5,55);
+
+var eegData;
+var nested;
+d3.csv("alpha_fft.csv",function(error, data) {
+	eegData = data.filter(function(d,i) {return i<(nSamples*nChans);});
+	nObs = Math.floor(eegData.length/nChans);
+	nBands = d3.entries(eegData[0]).length;
+	useBands = passFilter.length;
+	
+	for (var i = 0; i < eegData.length; i++) {
+		eegData[i]["row"] = i;
+		eegData[i]["channel"] = i%nChans;
+		eegData[i]["obs"] = Math.floor(i/nChans);
+	}
+	nested = d3.nest()
+		.key(function (d) {return d.channel;})
+		.key(function (d) {return d.obs;})
+		.entries(eegData)
+	;
+	svg = d3.select("body")
+	  .append("svg")
+		.attr("width",nObs*(gridPad+gridSize)+2*borderPad)
+		.attr("height",nChans*(chanPad+borderPad) + nChans*nBands*(gridPad+gridSize))
+	;
+	
+	var color = d3.scale.linear()
+		.domain([0, 10, 100])
+		.range(["white", "red", "gray"])
+		.clamp(true)
+	;
+		
+	var cells = svg.selectAll("g")
+		.data(nested).enter()
+		.append("g")
+			.attr("transform", function(d,i) {return "translate(0,"+i*(borderPad+chanPad+useBands*(gridPad+gridSize))+")";})
+	;
+	cells.append("rect")
+		.attr("width",borderPad+nSamples*(gridPad+gridSize))
+		.attr("height",borderPad+useBands*(gridPad+gridSize))
+		.style("stroke","black")
+		.style("fill","none")
+	;
+	
+	cells.selectAll("g")
+		.data(function(channel) {return channel.values;}).enter()
+		.append("g")
+			.attr("transform", function(d,i) {return "translate("+i*(gridPad+gridSize)+",0)";})
+	  .selectAll("rect")
+		.data(function(obs) {var bands = passFilter.map(function (i) {return obs.values[0][String(i)];}); return bands;}).enter()
+		.append("rect")
+			.attr("x", 0)
+			.attr("y", function(d,i) {return i*(gridPad + gridSize);})
+			.attr("width",gridSize)
+			.attr("height",gridSize)
+			.attr("rx",gridSize/5)
+			.attr("ry",gridSize/5)
+			.style("stroke","none")
+			.style("fill", function(d) {return color(d);})
+	;
+});
+
+</script>
+</body>
+</html>
